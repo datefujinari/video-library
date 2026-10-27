@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>学習動画ライブラリ</title>
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181b" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --ink: #1d1f22;
+    --muted: #6a6e74;
+    --line: #e3e1db;
+    --accent: #0f6e5c;
+    --accent-ink: #ffffff;
+    --chip: #ecebe6;
+    --thumb: #dcdad3;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181b;
+      --surface: #1f2226;
+      --ink: #eceae5;
+      --muted: #9a9ea5;
+      --line: #2f3338;
+      --accent: #5cc5ac;
+      --accent-ink: #0d1412;
+      --chip: #2a2e33;
+      --thumb: #2a2e33;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  header { padding: 28px 0 8px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: .02em; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .controls {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg);
+    padding: 12px 0 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .search {
+    width: 100%; font: inherit; font-size: 16px;
+    padding: 10px 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-top: 10px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; font: inherit; font-size: 13px; cursor: pointer;
+    padding: 5px 12px; border-radius: 999px; border: 0;
+    background: var(--chip); color: var(--ink);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .chips .sep { flex: none; width: 1px; background: var(--line); margin: 4px 4px; }
+
+  .grid {
+    display: grid; gap: 16px; padding: 18px 0 48px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+  .card {
+    background: var(--surface); border-radius: 12px; overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--line);
+    cursor: pointer; text-align: left; font: inherit; color: inherit; padding: 0;
+    display: flex; flex-direction: column;
+  }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .thumb {
+    position: relative; aspect-ratio: 16 / 9; background: var(--thumb);
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .thumb video, .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .thumb .glyph { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .1em; }
+  .badge {
+    position: absolute; left: 8px; top: 8px;
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+    background: rgba(0,0,0,.62); color: #fff;
+  }
+  .meta { padding: 10px 12px 12px; }
+  .title { font-size: 15px; font-weight: 600; margin: 0; word-break: break-word; }
+  .info { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .empty { color: var(--muted); text-align: center; padding: 60px 0; grid-column: 1 / -1; }
+
+  /* 再生画面 */
+  .viewer {
+    position: fixed; inset: 0; z-index: 20; background: #0d0e10;
+    display: none; flex-direction: column;
+  }
+  .viewer.open { display: flex; }
+  .vbar {
+    display: flex; align-items: center; gap: 10px; color: #fff;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+  }
+  .vbar .vtitle { flex: 1; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vbtn {
+    font: inherit; font-size: 13px; color: #fff; background: rgba(255,255,255,.14);
+    border: 0; border-radius: 8px; padding: 6px 12px; cursor: pointer; text-decoration: none; flex: none;
+  }
+  .vbody { flex: 1; min-height: 0; display: grid; place-items: center; padding: 0 0 env(safe-area-inset-bottom); }
+  .vbody video { max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .vbody iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>学習動画ライブラリ</h1>
+      <div class="sub" id="count">読み込み中…</div>
+    </header>
+    <div class="controls">
+      <input class="search" id="q" type="search" placeholder="タイトルで検索" autocomplete="off">
+      <div class="chips" id="chips"></div>
+    </div>
+    <main class="grid" id="grid"></main>
+  </div>
+
+  <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="vtitle">
+    <div class="vbar">
+      <div class="vtitle" id="vtitle"></div>
+      <a class="vbtn" id="vopen" target="_blank" rel="noopener">別タブで開く</a>
+      <button class="vbtn" id="vclose" type="button">閉じる</button>
+    </div>
+    <div class="vbody" id="vbody"></div>
+  </div>
+
+<script>
+(() => {
+  const TYPE_LABEL = { video: "動画", html: "HTML", youtube: "YouTube" };
+  const $ = (id) => document.getElementById(id);
+  let items = [];
+  let state = { q: "", type: "all", cat: "all" };
+
+  const enc = (p) => p.split("/").map(encodeURIComponent).join("/");
+  const ytId = (url) => {
+    const m = String(url).match(/(?:youtu\.be\/|v=|shorts\/|embed\/|live\/)([\w-]{11})/);
+    return m ? m[1] : "";
+  };
+  const fmtSize = (b) => !b ? "" : b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+  const fmtDate = (d) => {
+    if (!d) return "";
+    const t = new Date(d);
+    return isNaN(t) ? "" : `${t.getFullYear()}/${t.getMonth() + 1}/${t.getDate()}`;
+  };
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function renderChips() {
+    const types = ["all", ...Object.keys(TYPE_LABEL).filter((t) => items.some((i) => i.type === t))];
+    const cats = ["all", ...[...new Set(items.map((i) => i.category))].sort((a, b) => a.localeCompare(b, "ja"))];
+    const chip = (kind, val, label) =>
+      `<button class="chip" type="button" data-kind="${kind}" data-val="${esc(val)}" aria-pressed="${state[kind] === val}">${esc(label)}</button>`;
+    let html = types.map((t) => chip("type", t, t === "all" ? "すべて" : TYPE_LABEL[t])).join("");
+    if (cats.length > 2) {
+      html += '<span class="sep"></span>' + cats.map((c) => chip("cat", c, c === "all" ? "全カテゴリ" : c)).join("");
+    }
+    $("chips").innerHTML = html;
+  }
+
+  function thumbHTML(it) {
+    if (it.type === "video") {
+      // #t=0.5 で最初のコマを表紙にする(iPhone対策)
+      return `<video src="${enc(it.src)}#t=0.5" preload="metadata" muted playsinline></video>`;
+    }
+    if (it.type === "youtube") {
+      const id = ytId(it.src);
+      return id ? `<img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : `<span class="glyph">YouTube</span>`;
+    }
+    return `<span class="glyph">HTML ANIMATION</span>`;
+  }
+
+  function renderGrid() {
+    const q = state.q.trim().toLowerCase();
+    const list = items.filter((i) =>
+      (state.type === "all" || i.type === state.type) &&
+      (state.cat === "all" || i.category === state.cat) &&
+      (!q || i.title.toLowerCase().includes(q) || i.category.toLowerCase().includes(q))
+    );
+    $("grid").innerHTML = list.length ? list.map((it) => {
+      const idx = items.indexOf(it);
+      const info = [it.category !== "未分類" ? it.category : "", fmtDate(it.date), fmtSize(it.size)].filter(Boolean);
+      return `<button class="card" type="button" data-i="${idx}">
+        <div class="thumb">${thumbHTML(it)}<span class="badge">${TYPE_LABEL[it.type]}</span></div>
+        <div class="meta"><p class="title">${esc(it.title)}</p>
+        <div class="info">${info.map((s) => `<span>${esc(s)}</span>`).join("")}</div></div>
+      </button>`;
+    }).join("") : `<p class="empty">${items.length ? "該当するものがありません" : "まだ動画がありません。videos/ か motion/ にファイルを追加してください。"}</p>`;
+  }
+
+  function open(it, push = true) {
+    const body = $("vbody");
+    $("vtitle").textContent = it.title;
+    if (it.type === "video") {
+      body.innerHTML = `<video src="${enc(it.src)}" controls playsinline autoplay></video>`;
+      $("vopen").href = enc(it.src);
+    } else if (it.type === "youtube") {
+      const id = ytId(it.src);
+      body.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+      $("vopen").href = it.src;
+    } else {
+      body.innerHTML = `<iframe src="${enc(it.src)}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+      $("vopen").href = enc(it.src);
+    }
+    $("viewer").classList.add("open");
+    document.body.style.overflow = "hidden";
+    pushed = push;
+    if (push) history.pushState({ v: it.src }, "", "#v=" + encodeURIComponent(it.src));
+  }
+
+  let pushed = false;
+  function close(fromPop = false) {
+    $("vbody").innerHTML = "";
+    $("viewer").classList.remove("open");
+    document.body.style.overflow = "";
+    if (fromPop || !location.hash.startsWith("#v=")) return;
+    // 共有リンクから直接開いた場合は、戻るとサイトから出てしまうので URL だけ戻す
+    if (pushed) history.back(); else history.replaceState(null, "", location.pathname + location.search);
+  }
+
+  function openFromHash() {
+    const m = location.hash.match(/^#v=(.+)$/);
+    if (!m) { if ($("viewer").classList.contains("open")) close(true); return; }
+    const src = decodeURIComponent(m[1]);
+    const it = items.find((i) => i.src === src);
+    if (it) open(it, false);
+  }
+
+  $("q").addEventListener("input", (e) => { state.q = e.target.value; renderGrid(); });
+  $("chips").addEventListener("click", (e) => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    state[b.dataset.kind] = b.dataset.val; renderChips(); renderGrid();
+  });
+  $("grid").addEventListener("click", (e) => {
+    const c = e.target.closest(".card"); if (c) open(items[+c.dataset.i]);
+  });
+  $("vclose").addEventListener("click", () => close());
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("viewer").classList.contains("open")) close(); });
+  window.addEventListener("popstate", openFromHash);
+
+  fetch("videos.json", { cache: "no-store" })
+    .then((r) => r.ok ? r.json() : [])
+    .catch(() => [])
+    .then((data) => {
+      items = Array.isArray(data) ? data : [];
+      const total = items.reduce((s, i) => s + (i.size || 0), 0);
+      $("count").textContent = `${items.length} 本` + (total ? ` ・ 合計 ${(total / 1048576).toFixed(0)} MB / 1,000 MB` : "");
+      renderChips(); renderGrid(); openFromHash();
+    });
+})();
+</script>
+</body>
+</html>
